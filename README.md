@@ -14,5 +14,5 @@
 * Transformation bar for each selected model
 * Three light sources from different positions and directions.
 * Flat Shading、Gouraud Shading and Phong Shading.
-* Specific color coefficient for different materials
+* Specific color coefficient for different materials.
 * Texture Mapping.
