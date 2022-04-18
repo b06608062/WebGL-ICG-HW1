@@ -7,7 +7,7 @@
 [Demo Link](https://youtu.be/uS-rQ8H_pYk)
 
 ## Deploy
-[Deploy Link]()
+[Deploy Link](https://b06608062.github.io/WebGL-ICG-HW1/)
 
 ## Pre-Learning
 * [Learn WebGL](http://learnwebgl.brown37.net/index.html)
