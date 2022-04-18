@@ -18,7 +18,7 @@
 * Texture Mapping.
 
 ## Run in local
-1. Download repository.
+1. Download this repository.
 ```
 git clone https://github.com/b06608062/WebGL-ICG-HW1.git
 ```
