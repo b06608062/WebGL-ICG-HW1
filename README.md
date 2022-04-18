@@ -22,5 +22,5 @@
 ```
 git clone https://github.com/b06608062/WebGL-ICG-HW1.git
 ```
-2. Install Firefox and setting(You can refer to https://github.com/b06608062/WebGL-ICG-HW1/blob/master/HW1_Guide.pdf).
+2. Install Firefox and set the environment(You can refer to https://github.com/b06608062/WebGL-ICG-HW1/blob/master/HW1_Guide.pdf).
 3. Open index.html to view it in Firefox.
