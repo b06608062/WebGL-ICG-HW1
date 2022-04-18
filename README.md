@@ -22,4 +22,4 @@
 ```
 git clone https://github.com/b06608062/WebGL-ICG-HW1.git
 ```
-2. Install Firefox and 
+2. Install Firefox and setting
