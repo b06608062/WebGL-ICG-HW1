@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+
+<head>
+<title>ICG WebGL &mdash; HW1</title>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+
+<script type="text/javascript" src="./js/glMatrix-0.9.5.min.js"></script>
+<script type="text/javascript" src="./js/webgl-utils.js"></script>
+<script type="text/javascript" src="./js/Model.js"></script>
+
+<!-- 
+    TODO HERE: 
+    modify fragment shader or write another one
+    to implement flat, gouraud and phong shading
+ -->
+ <script id="fragmentShaderFlat" type="fragment">
+    #extension GL_OES_standard_derivatives : enable
+
+    precision mediump int;
+    precision mediump float;
+
+    uniform vec3 uKa;
+    uniform vec3 uLdColor;
+    uniform vec3 uLsColor;
+    uniform vec3 uLightsPosition[3];
+    uniform float uShininess;
+    uniform int uLights[3];
+    uniform float uAlpha;
+
+    varying vec3 vVertex;
+    varying vec3 vColor;
+
+    void main(void) {
+        vec3 U = dFdx(vVertex);
+        vec3 V = dFdy(vVertex);
+        vec3 N = normalize(cross(U, V));
+
+        float cosine;
+        vec3 lightDirection;
+        vec3 reflection;
+        vec3 diffuseColor = vec3(0.0, 0.0, 0.0);
+        vec3 specularColor = vec3(0.0, 0.0, 0.0);
+        vec3 ambientColor = uKa * vColor;
+
+        for (int i = 0; i < 3; i++) {
+            if (uLights[i] == 1) {
+                lightDirection = normalize(vVertex - uLightsPosition[i]);
+                cosine = max(dot(N, -lightDirection), 0.0);
+                diffuseColor += uLdColor * vColor * cosine;
+    
+                reflection = normalize(reflect(lightDirection, N));
+                cosine = pow(max(dot(reflection, normalize(-vVertex)), 0.0), uShininess);
+                specularColor += uLsColor * cosine;
+            }
+        }
+
+        vec3 color = ambientColor + diffuseColor + specularColor;
+
+        gl_FragColor = vec4(color, uAlpha);
+    }
+</script>
+
+ <script id="fragmentShaderGouraud" type="fragment">
+    precision mediump int;
+    precision mediump float;
+
+    uniform float uAlpha;
+
+    varying vec3 vColor;
+
+    void main(void) {
+        gl_FragColor = vec4(vColor, uAlpha);
+    }
+</script>
+
+<script id="fragmentShaderPhong" type="fragment">
+    precision mediump int;
+    precision mediump float;
+
+    uniform vec3 uKa;
+    uniform vec3 uLdColor;
+    uniform vec3 uLsColor;
+    uniform vec3 uLightsPosition[3];
+    uniform float uShininess;
+    uniform int uLights[3];
+    uniform float uAlpha;
+
+    varying vec3 vVertex;
+    varying vec3 vNormal;
+    varying vec3 vColor;
+
+    void main(void) {
+        float cosine;
+        vec3 lightDirection;
+        vec3 reflection;
+        vec3 diffuseColor = vec3(0.0, 0.0, 0.0);
+        vec3 specularColor = vec3(0.0, 0.0, 0.0);
+        vec3 ambientColor = uKa * vColor;
+
+        vec3 vertexNormal = normalize(vNormal);
+        for (int i = 0; i < 3; i++) {
+            if (uLights[i] == 1) {
+                lightDirection = normalize(vVertex - uLightsPosition[i]);
+                cosine = max(dot(vertexNormal, -lightDirection), 0.0);
+                diffuseColor += uLdColor * vColor * cosine;
+    
+                reflection = normalize(reflect(lightDirection, vertexNormal));
+                cosine = pow(max(dot(reflection, normalize(-vVertex)), 0.0), uShininess);
+                specularColor += uLsColor * cosine;
+            }
+        }
+
+        vec3 color = ambientColor + diffuseColor + specularColor;
+
+        gl_FragColor = vec4(color, uAlpha);
+    }
+</script>
+
+<script id="fragmentShaderTexture" type="fragment">
+    precision mediump int;
+    precision mediump float;
+
+    uniform vec3 uKa;
+    uniform vec3 uLdColor;
+    uniform vec3 uLsColor;
+    uniform vec3 uLightsPosition[3];
+    uniform float uShininess;
+    uniform int uLights[3];
+    uniform float uAlpha;
+    uniform sampler2D uSampler;
+
+    varying vec3 vVertex;
+    varying vec3 vNormal;
+    varying vec2 vTexture;
+
+    void main(void) {
+        vec3 fragmentColor = texture2D(uSampler, vTexture).rgb;
+        float cosine;
+        vec3 lightDirection;
+        vec3 reflection;
+        vec3 diffuseColor = vec3(0.0, 0.0, 0.0);
+        vec3 specularColor = vec3(0.0, 0.0, 0.0);
+        vec3 ambientColor = uKa * fragmentColor;
+
+        vec3 vertexNormal = normalize(vNormal);
+        for (int i = 0; i < 3; i++) {
+            if (uLights[i] == 1) {
+                lightDirection = normalize(vVertex - uLightsPosition[i]);
+                cosine = max(dot(vertexNormal, -lightDirection), 0.0);
+                diffuseColor += uLdColor * fragmentColor * cosine;
+    
+                reflection = normalize(reflect(lightDirection, vertexNormal));
+                cosine = pow(max(dot(reflection, normalize(-vVertex)), 0.0), uShininess);
+                specularColor += uLsColor * cosine;
+            }
+        }
+
+        vec3 color = ambientColor + diffuseColor + specularColor;
+
+        gl_FragColor = vec4(color, uAlpha);
+    }
+</script>
+
+<!-- 
+    TODO HERE:
+    modify vertex shader or write another one
+    to implement flat, gouraud and phong shading
+
+    NOTE:
+    if you want to write bonus part (texture mapping),
+    only Teapot.json has extra attribute "vertexTextureCoords"
+    which is used for texture mappping.
+ -->
+ <script id="vertexShaderFlat" type="vertex">
+    precision mediump int;
+    precision mediump float;
+
+    attribute vec3 aVertexPosition;
+    attribute vec3 aVertexNormal;
+    attribute vec3 aFrontColor;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+    uniform mat4 uNMatrix;
+
+    varying vec3 vVertex;
+    varying vec3 vNormal;
+    varying vec3 vColor;
+
+    void main(void) {
+        vVertex = vec3(uMVMatrix * vec4(aVertexPosition, 1.0));
+        vNormal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
+        vColor = aFrontColor.rgb;
+
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+    }
+</script>
+
+ <script id="vertexShaderGouraud" type="vertex">
+    precision mediump int;
+    precision mediump float;
+
+    attribute vec3 aVertexPosition;
+    attribute vec3 aVertexNormal;
+    attribute vec3 aFrontColor;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+    uniform mat4 uNMatrix;
+
+    uniform vec3 uKa;
+    uniform vec3 uLdColor;
+    uniform vec3 uLsColor;
+    uniform vec3 uLightsPosition[3];
+    uniform float uShininess;
+    uniform int uLights[3];
+
+    varying vec3 vColor;
+
+    void main(void) {
+        vec3 vVertex = vec3(uMVMatrix * vec4(aVertexPosition, 1.0));
+        vec3 vNormal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
+        vColor = aFrontColor.rgb;
+
+        float cosine;
+        vec3 lightDirection;
+        vec3 reflection;
+        vec3 diffuseColor = vec3(0.0, 0.0, 0.0);
+        vec3 specularColor = vec3(0.0, 0.0, 0.0);
+        vec3 ambientColor = uKa * vColor;
+
+        vec3 vertexNormal = normalize(vNormal);
+        for (int i = 0; i < 3; i++) {
+            if (uLights[i] == 1) {
+                lightDirection = normalize(vVertex - uLightsPosition[i]);
+                cosine = max(dot(vertexNormal, -lightDirection), 0.0);
+                diffuseColor += uLdColor * vColor * cosine;
+    
+                reflection = normalize(reflect(lightDirection, vertexNormal));
+                cosine = pow(max(dot(reflection, normalize(-vVertex)), 0.0), uShininess);
+                specularColor += uLsColor * cosine;
+            }
+        }
+
+        vColor = ambientColor + diffuseColor + specularColor;
+
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+    }
+</script>
+
+<script id="vertexShaderPhong" type="vertex">
+    precision mediump int;
+    precision mediump float;
+
+    attribute vec3 aVertexPosition;
+    attribute vec3 aVertexNormal;
+    attribute vec3 aFrontColor;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+    uniform mat4 uNMatrix;
+
+    varying vec3 vVertex;
+    varying vec3 vNormal;
+    varying vec3 vColor;
+
+    void main(void) {
+        vVertex = vec3(uMVMatrix * vec4(aVertexPosition, 1.0));
+        vNormal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
+        vColor = aFrontColor.rgb;
+
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+    }
+</script>
+
+<script id="vertexShaderTexture" type="vertex">
+    precision mediump int;
+    precision mediump float;
+
+    attribute vec3 aVertexPosition;
+    attribute vec3 aVertexNormal;
+    attribute vec2 aTextureCoordinate;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+    uniform mat4 uNMatrix;
+
+    varying vec3 vVertex;
+    varying vec3 vNormal;
+    varying vec2 vTexture;
+
+    void main(void) {
+        vVertex = vec3(uMVMatrix * vec4(aVertexPosition, 1.0));
+        vNormal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
+        vTexture = aTextureCoordinate;
+
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+    }
+</script>
+
+<script type="text/javascript">
+    // common variables
+    var gl;
+    var shaderProgram;
+
+    var mvMatrix = mat4.create();
+    var pMatrix  = mat4.create();
+    var nMatrix = mat4.create();
+
+    var angle = 180;
+    var lastTime = 0;
+
+    var model_name_list = ["Car_road", "Church_s", "Csie", "Easter", "Fighter", "Kangaroo", "Longteap", "Mercedes", "Mig27", "Patchair", "Plant", "Teapot", "Tomcat"];
+    var models = {};
+
+    var shaders;
+    var use_shader = "flat";
+
+    var num_of_active_model = 0;
+
+    var ka_r = 0.5;
+    var ka_g = 0.5;
+    var ka_b = 0.5;
+    var ld_r = 0.5;
+    var ld_g = 0.5;
+    var ld_b = 0.5;
+    var ls_r = 0.5;
+    var ls_g = 0.5;
+    var ls_b = 0.5;
+    var l1_x = 0.0;
+    var l1_y = 0.0;
+    var l1_z = 0.0;
+    var l2_x = -10.0;
+    var l2_y = 40.0;
+    var l2_z = -50.0;
+    var l3_x = 10.0;
+    var l3_y = 10.0;
+    var l3_z = -10.0;
+    var shininess = 32;
+    var lights = [1, 0, 0];
+    var alpha = 1.0;
+    var useTexture = false;
+    
+    var materials = {
+        "Default": [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 32],
+        "Brass": [0.3, 0.22, 0.03, 0.78, 0.57, 0.11, 0.99, 0.94, 0.81, 28],
+        "Bronze": [0.21, 0.13, 0.05, 0.71, 0.43, 0.18, 0.39, 0.27, 0.17, 26],
+        "Copper": [0.19, 0.07, 0.02, 0.7, 0.27, 0.08, 0.26, 0.14, 0.09, 13],
+        "Gold": [0.25, 0.2, 0.07, 0.75, 0.61, 0.23, 0.63, 0.56, 0.37, 51],
+        "Silver": [0.19, 0.19, 0.19, 0.51, 0.51, 0.51, 0.51, 0.51, 0.51, 51],
+        "Jade": [0.14, 0.22, 0.16, 0.54, 0.89, 0.63, 0.32, 0.32, 0.32, 13],
+        "Texture": [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 32],
+    }
+
+    function initGL(canvas) {
+        try {
+            gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+            gl.viewportWidth  = canvas.width;
+            gl.viewportHeight = canvas.height;
+            if(!gl.getExtension('OES_standard_derivatives')) {
+                throw 'extension not support';
+            }
+        } 
+        catch (e) {
+            console.log(e);
+        }
+
+        if (!gl) {
+            alert("Could not initialise WebGL, sorry :-(");
+        }
+    }
+
+    function getShader(gl, id) {
+        var shaderScript = document.getElementById(id);
+        if (!shaderScript) {
+            return null;
+        }
+
+        var shaderSource = "";
+        var k = shaderScript.firstChild;
+        while (k) {
+            // console.log(k);
+            if (k.nodeType == 3) {
+                shaderSource += k.textContent;
+            }
+
+            k = k.nextSibling;
+        }
+
+        var shader;
+        if (shaderScript.type == "fragment") {
+            shader = gl.createShader(gl.FRAGMENT_SHADER);
+        } 
+        else if (shaderScript.type == "vertex") {
+            shader = gl.createShader(gl.VERTEX_SHADER);
+        } 
+        else {
+            return null;
+        }
+
+        gl.shaderSource(shader, shaderSource);
+        gl.compileShader(shader);
+
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(shader));
+            return null;
+        }
+
+        return shader;
+    }
+
+    function initShaders(mode) {
+        var fragmentShader = getShader(gl, "fragmentShader" + mode);
+        var vertexShader   = getShader(gl, "vertexShader" + mode);
+
+        var shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            alert("Could not initialise shaders");
+        }
+
+        shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+        gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+        shaderProgram.vertexNormalAttribute = gl.getAttribLocation(shaderProgram, "aVertexNormal");
+        gl.enableVertexAttribArray(shaderProgram.vertexNormalAttribute);
+        if (mode == "Texture") {
+            shaderProgram.textureCoordinateAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoordinate");
+            gl.enableVertexAttribArray(shaderProgram.textureCoordinateAttribute);
+            shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");            
+        } else {
+            shaderProgram.vertexFrontColorAttribute = gl.getAttribLocation(shaderProgram, "aFrontColor");
+            gl.enableVertexAttribArray(shaderProgram.vertexFrontColorAttribute);            
+        }
+    
+        shaderProgram.pMatrixUniform  = gl.getUniformLocation(shaderProgram, "uPMatrix");
+        shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+        shaderProgram.nMatrixUniform = gl.getUniformLocation(shaderProgram, "uNMatrix");
+
+        shaderProgram.kaUniform = gl.getUniformLocation(shaderProgram, "uKa");
+        shaderProgram.ldColorUniform = gl.getUniformLocation(shaderProgram, "uLdColor");
+        shaderProgram.lsColorUniform = gl.getUniformLocation(shaderProgram, "uLsColor");
+        shaderProgram.lightsPositionUniform = gl.getUniformLocation(shaderProgram, "uLightsPosition");
+        shaderProgram.shininessUniform = gl.getUniformLocation(shaderProgram, "uShininess");
+        shaderProgram.lightsUniform = gl.getUniformLocation(shaderProgram, "uLights");
+        shaderProgram.alphaUniform = gl.getUniformLocation(shaderProgram, "uAlpha");
+
+        return shaderProgram;
+    }
+
+    /*
+        TODO HERE:
+        add two or more objects showing on the canvas
+        (it needs at least three objects showing at the same time)
+    */
+    function drawScene() {
+        gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        for (var [key, value] of Object.entries(models)) {
+            if (value.display) {
+                value.model.angle = angle;
+                if (useTexture && key == "Teapot") {
+                    shaderProgram = shaders["texture"];
+                } else {
+                    shaderProgram = shaders[use_shader];
+                }
+                gl.useProgram(shaderProgram);
+                gl.uniform3f(shaderProgram.kaUniform, ka_r, ka_g, ka_b);
+                gl.uniform3f(shaderProgram.ldColorUniform, ld_r, ld_g, ld_b);
+                gl.uniform3f(shaderProgram.lsColorUniform, ls_r, ls_g, ls_b);
+                gl.uniform3fv(shaderProgram.lightsPositionUniform, [l1_x, l1_y, l1_z, l2_x, l2_y, l2_z, l3_x, l3_y, l3_z]);
+                gl.uniform1f(shaderProgram.shininessUniform, shininess);
+                gl.uniform1iv(shaderProgram.lightsUniform, lights);
+                gl.uniform1f(shaderProgram.alphaUniform, alpha);
+                value.model.setUp(gl, shaderProgram, pMatrix, mvMatrix, nMatrix, useTexture && key == "Teapot");
+            }
+        }
+    }
+
+    function animate() {
+        var timeNow = new Date().getTime();
+        if (lastTime != 0) {
+            var elapsed = timeNow - lastTime;
+            angle += 0.03 * elapsed;
+        }
+        
+        lastTime = timeNow;
+    }
+
+    function tick() {
+        requestAnimFrame(tick);
+        drawScene();
+        animate();
+    }
+
+    function webGLStart() {
+        var canvas = document.getElementById("ICG-canvas");
+        initGL(canvas);
+        shaders = {"flat": initShaders("Flat"), "gouraud": initShaders("Gouraud"), "phong": initShaders("Phong"), "texture": initShaders("Texture")};
+        
+        model_name_list.forEach((model_name) => {
+            var M = new Model(`./model/${model_name}.json`);
+            M.loadModel(gl);
+            var model = {};
+            model["model"] = M;
+            model["display"] = false;
+            models[model_name] = model;
+        });
+
+        for (var i = 1; i <= 13; i++) {
+            document.getElementById(`cbox${i}`).checked = false;
+        }
+
+        gl.clearColor(0.0, 0.2, 0.2, 1.0);
+        gl.enable(gl.DEPTH_TEST);
+
+        tick();
+    }
+
+    function handleModelSelect(target) {
+        models[target.value].display = target.checked;
+        document.getElementById(target.value).style.display = target.checked ? "table-row" : "none";
+        num_of_active_model += target.checked ? 1 : -1;
+        document.getElementById("control-table").style.display = num_of_active_model > 0 ? "block" : "none";
+    }
+
+    function handleShaderSelect(target) {
+        use_shader = target.value;
+    };
+
+    function handleLightModel(target) {
+        document.getElementById(target.name).innerHTML = target.value;
+        switch (target.name) {
+            case 'ka_r':
+                ka_r = target.value;
+                break
+            case 'ka_g':
+                ka_g = target.value;
+                break
+            case 'ka_b':
+                ka_b = target.value;
+                break    
+            case 'ld_r':
+                ld_r = target.value;
+                break
+            case 'ld_g':
+                ld_g = target.value;
+                break
+            case 'ld_b':
+                ld_b = target.value;
+                break
+            case 'ls_r':
+                ls_r = target.value;
+                break
+            case 'ls_g':
+                ls_g = target.value;
+                break
+            case 'ls_b':
+                ls_b = target.value;
+                break
+            case 'l1_x':
+                l1_x = target.value;
+                break
+            case 'l1_y':
+                l1_y = target.value;
+                break
+            case 'l1_z':
+                l1_z = target.value;
+                break
+            case 'l2_x':
+                l2_x = target.value;
+                break
+            case 'l2_y':
+                l2_y = target.value;
+                break
+            case 'l2_z':
+                l2_z = target.value;
+                break
+            case 'l3_x':
+                l3_x = target.value;
+                break
+            case 'l3_y':
+                l3_y = target.value;
+                break
+            case 'l3_z':
+                l3_z = target.value;
+                break
+            case 'shininess':
+                shininess = target.value;
+                break
+        }
+    }
+
+    function handleControlBar(target) {
+        var model = models[target.name].model;
+        switch (target.getAttribute("data-task")) {
+            case 'X':
+                model.translation[0] = target.value - 50;
+                break
+            case 'Y':
+                model.translation[1] = target.value - 50;
+                break
+            case 'Z':
+                model.translation[2] = target.value - 50;
+                break 
+            case 'Scale':
+                model.scale = [target.value, target.value, target.value];
+                break    
+            case 'X-rotation':
+                model.rotation = [1, 0, 0];
+                break
+            case 'Y-rotation':
+                model.rotation =  [0, 1, 0];
+                break
+            case 'Z-rotation':
+                model.rotation = [0, 0, 1];
+                break
+        }
+    }
+
+    function handleLighhtSelect(target, idx) {
+        lights[idx] = target.checked ? 1 : 0;
+    }
+
+    function handleChangeMaterial(value) {
+        var light_control_bar_list = document.getElementById("light-control-box").childNodes;
+        var material = materials[value];
+        for (var i = 1; i <= 19; i += 2) {
+            var  light_control_bar =  light_control_bar_list[i].childNodes;
+            switch (light_control_bar[3].name) {
+                case 'ka_r':
+                    ka_r = material[0];
+                    light_control_bar[3].value = material[0];
+                    light_control_bar[5].innerHTML = material[0]
+                    break
+                case 'ka_g':
+                    ka_g = material[1];
+                    light_control_bar[3].value = material[1];
+                    light_control_bar[5].innerHTML = material[1];
+                    break
+                case 'ka_b':
+                    ka_b = material[2];
+                    light_control_bar[3].value = material[2];
+                    light_control_bar[5].innerHTML = material[2];           
+                    break    
+                case 'ld_r':
+                    ld_r = material[3];
+                    light_control_bar[3].value = material[3];
+                    light_control_bar[5].innerHTML = material[3];
+                    break
+                case 'ld_g':
+                    ld_g = material[4];
+                    light_control_bar[3].value = material[4];
+                    light_control_bar[5].innerHTML = material[4];
+                    break
+                case 'ld_b':
+                    ld_b = material[5];
+                    light_control_bar[3].value = material[5];
+                    light_control_bar[5].innerHTML = material[5];
+                    break
+                case 'ls_r':
+                    ls_r = material[6];
+                    light_control_bar[3].value = material[6];
+                    light_control_bar[5].innerHTML = material[6];
+                    break
+                case 'ls_g':
+                    ls_g = material[7];
+                    light_control_bar[3].value = material[7];
+                    light_control_bar[5].innerHTML = material[7];
+                    break
+                case 'ls_b':
+                    ls_b = material[8];
+                    light_control_bar[3].value = material[8];
+                    light_control_bar[5].innerHTML = material[8];
+                    break
+                case 'shininess':
+                    shininess = material[9];
+                    light_control_bar[3].value = material[9];
+                    light_control_bar[5].innerHTML = material[9];
+                    break
+            }
+        }
+        switch (value) {
+            case "Jade":
+                alpha = 0.95;
+                break
+            default:
+                alpha = 1.0;
+        }
+        useTexture = value == "Texture" ? true : false;
+    }
+
+</script>
+</head>
+
+<body onload="webGLStart()">
+    <div style="width: 100%; display: flex">
+        <div style="width: 75%">
+            <canvas id="ICG-canvas" style="border: none;" width="960" height="540"></canvas>
+        </div>
+        <div id="light-control-box" style="width: 20%; display: flex; flex-direction: column; justify-content: space-around; height: 540px; overflow: scroll">
+            <div style="display: flex; justify-content: space-around">
+                <label>ka_r</label>
+                <input type="range" name="ka_r" min="0" max="1" value="0.5" step="0.01" onchange="handleLightModel(this)">
+                <span id="ka_r">0.5</span>
+            </div>
+            <div style="display: flex; justify-content: space-around">
+                <label>ka_g</label>
+                <input type="range" name="ka_g" min="0" max="1" value="0.5" step="0.01" onchange="handleLightModel(this)">
+                <span id="ka_g">0.5</span>
+            </div>
+            <div style="display: flex; justify-content: space-around">
+                <label>ka_b</label>
+                <input type="range" name="ka_b" min="0" max="1" value="0.5" step="0.01" onchange="handleLightModel(this)">
+                <span id="ka_b">0.5</span>
+            </div>
+            <div style="display: flex; justify-content: space-around">
+                <label>ld_r</label>
+                <input type="range" name="ld_r" min="0" max="1" value="0.5" step="0.01" onchange="handleLightModel(this)">
+                <span id="ld_r">0.5</span>
+            </div>
+            <div style="display: flex; justify-content: space-around">
+                <label>ld_g</label>
+                <input type="range" name="ld_g" min="0" max="1" value="0.5" step="0.01" onchange="handleLightModel(this)">
+                <span id="ld_g">0.5</span>
+            </div>
+            <div style="display: flex; justify-content: space-around">
+                <label>ld_b</label>
+                <input type="range" name="ld_b" min="0" max="1" value="0.5" step="0.01" onchange="handleLightModel(this)">
+                <span id="ld_b">0.5</span>
+            </div>
+            <div style="display: flex; justify-content: space-around">
+                <label>ls_r</label>
+                <input type="range" name="ls_r" min="0" max="1" value="0.5" step="0.01" onchange="handleLightModel(this)">
+                <span id="ls_r">0.5</span>
+            </div>
+            <div style="display: flex; justify-content: space-around">
+                <label>ls_g</label>
+                <input type="range" name="ls_g" min="0" max="1" value="0.5" step="0.01" onchange="handleLightModel(this)">
+                <span id="ls_g">0.5</span>
+            </div>
+            <div style="display: flex; justify-content: space-around">
+                <label>ls_b</label>
+                <input type="range" name="ls_b" min="0" max="1" value="0.5" step="0.01" onchange="handleLightModel(this)">
+                <span id="ls_b">0.5</span>
+            </div>
+            <div style="display: flex; justify-content: space-around">
+                <label>shininess</label>
+                <input type="range" name="shininess" min="0" max="100" value="32" onchange="handleLightModel(this)">
+                <span id="shininess">32</span>
+            </div>
+            <div style="display: flex; justify-content: flex-start">
+                <input type="checkbox" id="light1" onclick="handleLighhtSelect(this, 0)" checked>
+                <label for="light1">light1</label>
+            </div>           
+            <div style="display: flex; justify-content: space-around">
+                <label>l1_x</label>
+                <input type="range" name="l1_x" min="-100" max="100" value="0.0" onchange="handleLightModel(this)">
+                <span id="l1_x">0</span>
+            </div>
+            <div style="display: flex; justify-content: space-around">
+                <label>l1_y</label>
+                <input type="range" name="l1_y" min="-100" max="100" value="0.0" onchange="handleLightModel(this)">
+                <span id="l1_y">0</span>
+            </div>
+            <div style="display: flex; justify-content: space-around">
+                <label>l1_z</label>
+                <input type="range" name="l1_z" min="-100" max="100" value="0.0" onchange="handleLightModel(this)">
+                <span id="l1_z">0</span>
+            </div>
+            <div style="display: flex; justify-content: flex-start">
+                <input type="checkbox" id="light2" onclick="handleLighhtSelect(this, 1)">
+                <label for="light2">light2</label>
+            </div> 
+            <div style="display: flex; justify-content: space-around">
+                <label>l2_x</label>
+                <input type="range" name="l2_x" min="-100" max="100" value="-10.0" onchange="handleLightModel(this)">
+                <span id="l2_x">-10</span>
+            </div>
+            <div style="display: flex; justify-content: space-around">
+                <label>l2_y</label>
+                <input type="range" name="l2_y" min="-100" max="100" value="-10.0" onchange="handleLightModel(this)">
+                <span id="l2_y">40</span>
+            </div>
+            <div style="display: flex; justify-content: space-around">
+                <label>l2_z</label>
+                <input type="range" name="l2_z" min="-100" max="100" value="-10.0" onchange="handleLightModel(this)">
+                <span id="l2_z">-50</span>
+            </div>
+            <div style="display: flex; justify-content: flex-start">
+                <input type="checkbox" id="light3" onclick="handleLighhtSelect(this, 2)">
+                <label for="light3">light3</label>
+            </div> 
+            <div style="display: flex; justify-content: space-around">
+                <label>l3_x</label>
+                <input type="range" name="l3_x" min="-100" max="100" value="10.0" onchange="handleLightModel(this)">
+                <span id="l3_x">10</span>
+            </div>
+            <div style="display: flex; justify-content: space-around">
+                <label>l3_y</label>
+                <input type="range" name="l3_y" min="-100" max="100" value="10.0" onchange="handleLightModel(this)">
+                <span id="l3_y">10</span>
+            </div>
+            <div style="display: flex; justify-content: space-around">
+                <label>l3_z</label>
+                <input type="range" name="l3_z" min="-100" max="100" value="-10.0" onchange="handleLightModel(this)">
+                <span id="l3_z">-10</span>
+            </div>
+        </div>
+    </div>
+    <div>
+        <input type="checkbox" id="cbox1" value="Car_road" onclick="handleModelSelect(this)">
+        <label for="cbox1">Car_road</label>
+        <input type="checkbox" id="cbox2" value="Church_s" onclick="handleModelSelect(this)">
+        <label for="cbox2">Church_s</label>
+        <input type="checkbox" id="cbox3" value="Csie" onclick="handleModelSelect(this)">
+        <label for="cbox3">Csie</label>
+        <input type="checkbox" id="cbox4" value="Easter" onclick="handleModelSelect(this)">
+        <label for="cbox4">Easter</label>
+        <input type="checkbox" id="cbox5" value="Fighter" onclick="handleModelSelect(this)">
+        <label for="cbox5">Fighter</label>
+        <input type="checkbox" id="cbox6" value="Kangaroo" onclick="handleModelSelect(this)">
+        <label for="cbox6">Kangaroo</label>
+        <input type="checkbox" id="cbox7" value="Longteap" onclick="handleModelSelect(this)">
+        <label for="cbox7">Longteap</label>
+        <input type="checkbox" id="cbox8" value="Mercedes" onclick="handleModelSelect(this)">
+        <label for="cbox8">Mercedes</label>
+        <input type="checkbox" id="cbox9" value="Mig27" onclick="handleModelSelect(this)">
+        <label for="cbox9">Mig27</label>
+        <input type="checkbox" id="cbox10" value="Patchair" onclick="handleModelSelect(this)">
+        <label for="cbox10">Patchair</label>
+        <input type="checkbox" id="cbox11" value="Plant" onclick="handleModelSelect(this)">
+        <label for="cbox11">Plant</label>
+        <input type="checkbox" id="cbox12" value="Teapot" onclick="handleModelSelect(this)">
+        <label for="cbox12">Teapot</label>
+        <input type="checkbox" id="cbox13" value="Tomcat" onclick="handleModelSelect(this)"> 
+        <label for="cbox13">Tomcat</label>
+    </div>
+    <div>
+        <input type="radio" name="shading" value="flat" checked onclick="handleShaderSelect(this)">
+        <label>flat</label>
+        <input type="radio" name="shading" value="gouraud" onclick="handleShaderSelect(this)">
+        <label>gouraud</label>
+        <input type="radio" name="shading" value="phong" onclick="handleShaderSelect(this)">
+        <label>phong</label>
+        <select onchange="handleChangeMaterial(value)">
+            <option value="Default">Default</option>
+            <option value="Brass">Brass</option>
+            <option value="Bronze">Bronze</option>
+            <option value="Copper">Copper</option>
+            <option value="Gold">Gold</option>
+            <option value="Silver">Silver</option>
+            <option value="Jade">Jade</option>
+            <option value="Texture">Texture</option>
+        </select>
+    </div>
+    <table id="control-table" style="display: none">
+        <thead>
+            <tr>
+                <th></th>
+                <th>X</th>
+                <th>Y</th>
+                <th>Z</th>
+                <th>Scale</th>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr id="Car_road" style="display: none">
+                <td>Car_road</td>
+                <td><input type="range" name="Car_road" data-task="X" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Car_road" data-task="Y" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Car_road" data-task="Z" min="0" max="50" value="0" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Car_road" data-task="Scale" min="0" max="5" value="1" onchange="handleControlBar(this)"></td>
+                <td>
+                    <input type="radio" name="Car_road" value="X-axis" data-task="X-rotation" onchange="handleControlBar(this)">
+                    <label>X-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Car_road" value="Y-axis" data-task="Y-rotation" onchange="handleControlBar(this)" checked>
+                    <label>Y-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Car_road" value="Z-axis" data-task="Z-rotation" onchange="handleControlBar(this)">
+                    <label>Z-axis</label>
+                </td>
+            </tr>
+            <tr id="Church_s" style="display: none">
+                <td>Church_s</td>
+                <td><input type="range" name="Church_s" data-task="X" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Church_s" data-task="Y" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Church_s" data-task="Z" min="0" max="50" value="0" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Church_s" data-task="Scale" min="0" max="5" value="1" onchange="handleControlBar(this)"></td>
+                <td>
+                    <input type="radio" name="Church_s" value="X-axis" data-task="X-rotation" onchange="handleControlBar(this)">
+                    <label>X-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Church_s" value="Y-axis" data-task="Y-rotation" onchange="handleControlBar(this)" checked>
+                    <label>Y-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Church_s" value="Z-axis" data-task="Z-rotation" onchange="handleControlBar(this)">
+                    <label>Z-axis</label>
+                </td>
+            </tr>
+            <tr id="Csie" style="display: none">
+                <td>Csie</td>
+                <td><input type="range" name="Csie" data-task="X" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Csie" data-task="Y" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Csie" data-task="Z" min="0" max="50" value="0" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Csie" data-task="Scale" min="0" max="5" value="1" onchange="handleControlBar(this)"></td>
+                <td>
+                    <input type="radio" name="Csie" value="X-axis" data-task="X-rotation" onchange="handleControlBar(this)">
+                    <label>X-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Csie" value="Y-axis" data-task="Y-rotation" onchange="handleControlBar(this)" checked>
+                    <label>Y-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Csie" value="Z-axis" data-task="Z-rotation" onchange="handleControlBar(this)">
+                    <label>Z-axis</label>
+                </td>
+            </tr>
+            <tr id="Easter" style="display: none">
+                <td>Easter</td>
+                <td><input type="range" name="Easter" data-task="X" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Easter" data-task="Y" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Easter" data-task="Z" min="0" max="50" value="0" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Easter" data-task="Scale" min="0" max="5" value="1" onchange="handleControlBar(this)"></td>
+                <td>
+                    <input type="radio" name="Easter" value="X-axis" data-task="X-rotation" onchange="handleControlBar(this)">
+                    <label>X-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Easter" value="Y-axis" data-task="Y-rotation" onchange="handleControlBar(this)" checked>
+                    <label>Y-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Easter" value="Z-axis" data-task="Z-rotation" onchange="handleControlBar(this)">
+                    <label>Z-axis</label>
+                </td>
+            </tr>
+            <tr id="Fighter" style="display: none">
+                <td>Fighter</td>
+                <td><input type="range" name="Fighter" data-task="X" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Fighter" data-task="Y" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Fighter" data-task="Z" min="0" max="50" value="0" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Fighter" data-task="Scale" min="0" max="5" value="1" onchange="handleControlBar(this)"></td>
+                <td>
+                    <input type="radio" name="Fighter" value="X-axis" data-task="X-rotation" onchange="handleControlBar(this)">
+                    <label>X-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Fighter" value="Y-axis" data-task="Y-rotation" onchange="handleControlBar(this)" checked>
+                    <label>Y-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Fighter" value="Z-axis" data-task="Z-rotation" onchange="handleControlBar(this)">
+                    <label>Z-axis</label>
+                </td>
+            </tr>
+            <tr id="Kangaroo" style="display: none">
+                <td>Kangaroo</td>
+                <td><input type="range" name="Kangaroo" data-task="X" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Kangaroo" data-task="Y" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Kangaroo" data-task="Z" min="0" max="50" value="0" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Kangaroo" data-task="Scale" min="0" max="5" value="1" onchange="handleControlBar(this)"></td>
+                <td>
+                    <input type="radio" name="Kangaroo" value="X-axis" data-task="X-rotation" onchange="handleControlBar(this)">
+                    <label>X-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Kangaroo" value="Y-axis" data-task="Y-rotation" onchange="handleControlBar(this)" checked>
+                    <label>Y-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Kangaroo" value="Z-axis" data-task="Z-rotation" onchange="handleControlBar(this)">
+                    <label>Z-axis</label>
+            </tr>
+            <tr id="Longteap" style="display: none">
+                <td>Longteap</td>
+                <td><input type="range" name="Longteap" data-task="X" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Longteap" data-task="Y" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Longteap" data-task="Z" min="0" max="50" value="0" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Longteap" data-task="Scale" min="0" max="5" value="1" onchange="handleControlBar(this)"></td>
+                <td>
+                    <input type="radio" name="Longteap" value="X-axis" data-task="X-rotation" onchange="handleControlBar(this)">
+                    <label>X-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Longteap" value="Y-axis" data-task="Y-rotation" onchange="handleControlBar(this)" checked>
+                    <label>Y-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Longteap" value="Z-axis" data-task="Z-rotation" onchange="handleControlBar(this)">
+                    <label>Z-axis</label>
+            </tr>
+            <tr id="Mercedes" style="display: none">
+                <td>Mercedes</td>
+                <td><input type="range" name="Mercedes" data-task="X" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Mercedes" data-task="Y" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Mercedes" data-task="Z" min="0" max="50" value="0" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Mercedes" data-task="Scale" min="0" max="5" value="1" onchange="handleControlBar(this)"></td>
+                <td>
+                    <input type="radio" name="Mercedes" value="X-axis" data-task="X-rotation" onchange="handleControlBar(this)">
+                    <label>X-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Mercedes" value="Y-axis" data-task="Y-rotation" onchange="handleControlBar(this)" checked>
+                    <label>Y-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Mercedes" value="Z-axis" data-task="Z-rotation" onchange="handleControlBar(this)">
+                    <label>Z-axis</label>
+            </tr>
+            <tr id="Mig27" style="display: none">
+                <td>Mig27</td>
+                <td><input type="range" name="Mig27" data-task="X" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Mig27" data-task="Y" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Mig27" data-task="Z" min="0" max="50" value="0" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Mig27" data-task="Scale" min="0" max="5" value="1" onchange="handleControlBar(this)"></td>
+                <td>
+                    <input type="radio" name="Mig27" value="X-axis" data-task="X-rotation" onchange="handleControlBar(this)">
+                    <label>X-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Mig27" value="Y-axis" data-task="Y-rotation" onchange="handleControlBar(this)" checked>
+                    <label>Y-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Mig27" value="Z-axis" data-task="Z-rotation" onchange="handleControlBar(this)">
+                    <label>Z-axis</label>
+            </tr>
+            <tr id="Patchair" style="display: none">
+                <td>Patchair</td>
+                <td><input type="range" name="Patchair" data-task="X" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Patchair" data-task="Y" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Patchair" data-task="Z" min="0" max="50" value="0" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Patchair" data-task="Scale" min="0" max="5" value="1" onchange="handleControlBar(this)"></td>
+                <td>
+                    <input type="radio" name="Patchair" value="X-axis" data-task="X-rotation" onchange="handleControlBar(this)">
+                    <label>X-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Patchair" value="Y-axis" data-task="Y-rotation" onchange="handleControlBar(this)" checked>
+                    <label>Y-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Patchair" value="Z-axis" data-task="Z-rotation" onchange="handleControlBar(this)">
+                    <label>Z-axis</label>
+            </tr>
+            <tr id="Plant" style="display: none">
+                <td>Plant</td>
+                <td><input type="range" name="Plant" data-task="X" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Plant" data-task="Y" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Plant" data-task="Z" min="0" max="50" value="0" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Plant" data-task="Scale" min="0" max="5" value="1" onchange="handleControlBar(this)"></td>
+                <td>
+                    <input type="radio" name="Plant" value="X-axis" data-task="X-rotation" onchange="handleControlBar(this)">
+                    <label>X-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Plant" value="Y-axis" data-task="Y-rotation" onchange="handleControlBar(this)" checked>
+                    <label>Y-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Plant" value="Z-axis" data-task="Z-rotation" onchange="handleControlBar(this)">
+                    <label>Z-axis</label>
+            </tr>
+            <tr id="Teapot" style="display: none">
+                <td>Teapot</td>
+                <td><input type="range" name="Teapot" data-task="X" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Teapot" data-task="Y" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Teapot" data-task="Z" min="0" max="50" value="0" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Teapot" data-task="Scale" min="0" max="10" value="1" step="0.1" onchange="handleControlBar(this)"></td>
+                <td>
+                    <input type="radio" name="Teapot" value="X-axis" data-task="X-rotation" onchange="handleControlBar(this)">
+                    <label>X-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Teapot" value="Y-axis" data-task="Y-rotation" onchange="handleControlBar(this)" checked>
+                    <label>Y-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Teapot" value="Z-axis" data-task="Z-rotation" onchange="handleControlBar(this)">
+                    <label>Z-axis</label>
+            </tr>
+            <tr id="Tomcat" style="display: none">
+                <td>Tomcat</td>
+                <td><input type="range" name="Tomcat" data-task="X" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Tomcat" data-task="Y" min="0" max="100" value="50" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Tomcat" data-task="Z" min="0" max="50" value="0" onchange="handleControlBar(this)"></td>
+                <td><input type="range" name="Tomcat" data-task="Scale" min="0" max="5" value="1" onchange="handleControlBar(this)"></td>
+                <td>
+                    <input type="radio" name="Tomcat" value="X-axis" data-task="X-rotation" onchange="handleControlBar(this)">
+                    <label>X-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Tomcat" value="Y-axis" data-task="Y-rotation" onchange="handleControlBar(this)" checked>
+                    <label>Y-axis</label>
+                </td>
+                <td>
+                    <input type="radio" name="Tomcat" value="Z-axis" data-task="Z-rotation" onchange="handleControlBar(this)">
+                    <label>Z-axis</label>
+            </tr>
+        </tbody>
+    </table>
+</body>
+
+</html>
