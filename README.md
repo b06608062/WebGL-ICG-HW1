@@ -16,3 +16,8 @@
 * Flat Shading、Gouraud Shading and Phong Shading.
 * Specific color coefficient for different materials.
 * Texture Mapping.
+
+## Run in local
+```
+git clone https://github.com/b06608062/WebGL-ICG-HW1.git
+```
