@@ -11,7 +11,8 @@
 * [Learn WebGL](http://learnwebgl.brown37.net/index.html)
 
 ## Implementations
-* Flat Shading、Gouraud Shading and Phong Shading.
-* Texture Mapping.
 * Transformation bar for each selected model
 * Three light sources from different positions and directions.
+* Flat Shading、Gouraud Shading and Phong Shading.
+* Specific color coefficient for different materials
+* Texture Mapping.
