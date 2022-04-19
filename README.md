@@ -4,7 +4,7 @@
 ![This is an image](https://github.com/b06608062/WebGL-ICG-HW1/blob/master/demo_image/截圖%202022-04-19%20下午9.33.13.png)
 
 ## Demo
-[Demo Link](https://youtu.be/uS-rQ8H_pYk)
+[Demo Link](https://youtu.be/9f0u-vViTL8)
 
 ## Deploy
 [Deploy Link](https://b06608062.github.io/WebGL-ICG-HW1/)
