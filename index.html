@@ -309,6 +309,8 @@
 
     var angle = 180;
     var lastTime = 0;
+    var perspective = 45;
+    var shear = 0;
 
     var model_name_list = ["Car_road", "Church_s", "Csie", "Easter", "Fighter", "Kangaroo", "Longteap", "Mercedes", "Mig27", "Patchair", "Plant", "Teapot", "Tomcat"];
     var models = {};
@@ -340,7 +342,7 @@
     var lights = [1, 0, 0];
     var alpha = 1.0;
     var useTexture = false;
-    
+
     var materials = {
         "Default": [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 32],
         "Brass": [0.3, 0.22, 0.03, 0.78, 0.57, 0.11, 0.99, 0.94, 0.81, 28],
@@ -475,7 +477,7 @@
                 gl.uniform1f(shaderProgram.shininessUniform, shininess);
                 gl.uniform1iv(shaderProgram.lightsUniform, lights);
                 gl.uniform1f(shaderProgram.alphaUniform, alpha);
-                value.model.setUp(gl, shaderProgram, pMatrix, mvMatrix, nMatrix, useTexture && key == "Teapot");
+                value.model.setUp(gl, shaderProgram, pMatrix, perspective, mvMatrix, shear, nMatrix, useTexture && key == "Teapot");
             }
         }
     }
@@ -497,6 +499,7 @@
     }
 
     function webGLStart() {
+        console.log(mvMatrix);
         var canvas = document.getElementById("ICG-canvas");
         initGL(canvas);
         shaders = {"flat": initShaders("Flat"), "gouraud": initShaders("Gouraud"), "phong": initShaders("Phong"), "texture": initShaders("Texture")};
@@ -592,6 +595,16 @@
                 shininess = target.value;
                 break
         }
+    }
+
+    function handlePerspective(target) {
+        document.getElementById(target.name).innerHTML = target.value;
+        perspective = target.value;
+    }
+
+    function handleShear(target) {
+        document.getElementById(target.name).innerHTML = target.value >= 0 ? `x + ${target.value}y` : `x - ${-target.value}y`
+        shear = target.value;
     }
 
     function handleControlBar(target) {
@@ -698,10 +711,10 @@
 
 <body onload="webGLStart()">
     <div style="width: 100%; display: flex">
-        <div style="width: 75%">
+        <div style="width: 960">
             <canvas id="ICG-canvas" style="border: none;" width="960" height="540"></canvas>
         </div>
-        <div id="light-control-box" style="width: 20%; display: flex; flex-direction: column; justify-content: space-around; height: 540px; overflow: scroll">
+        <div id="light-control-box" style="display: flex; flex-direction: column; justify-content: space-around; height: 540p">
             <div style="display: flex; justify-content: space-around">
                 <label>ka_r</label>
                 <input type="range" name="ka_r" min="0" max="1" value="0.5" step="0.01" onchange="handleLightModel(this)">
@@ -856,6 +869,17 @@
             <option value="Jade">Jade</option>
             <option value="Texture">Texture</option>
         </select>
+        <div style="display: flex">
+            <label>perspective</label>
+            <input type="range" name="perspective" min="0" max="180" value="45" onchange="handlePerspective(this)">
+            &nbsp;
+            <span id="perspective">45</span>
+            &nbsp;&nbsp;&nbsp;
+            <label>shear</label>
+            <input type="range" name="shear" min="-1" max="1" value="0" step="0.1" onchange="handleShear(this)">
+            &nbsp;
+            <span id="shear">x + 0y</span>
+        </div>
     </div>
     <table id="control-table" style="display: none">
         <thead>

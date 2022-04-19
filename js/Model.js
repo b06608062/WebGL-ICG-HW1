@@ -56,14 +56,15 @@ class Model {
         });
     }
     
-    setUp(gl, shaderProgram, pMatrix, mvMatrix, nMatrix, useTexture=false) {
+    setUp(gl, shaderProgram, pMatrix, perspective, mvMatrix, shear, nMatrix, useTexture=false) {
         // Setup Projection Matrix
-        mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+        mat4.perspective(perspective, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
 
         // Setup Model-View Matrix
         mat4.identity(mvMatrix);
         mat4.translate(mvMatrix, this.translation);
         mat4.rotate(mvMatrix, Model.degToRad(this.angle), this.rotation);
+        mvMatrix[4] = shear;
         mat4.scale(mvMatrix, this.scale);
 
         gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
