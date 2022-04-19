@@ -11,6 +11,7 @@
 
 ## Pre-Learning
 * [Learn WebGL](http://learnwebgl.brown37.net/index.html)
+* [WebGLFundamentals](https://webglfundamentals.org/webgl/lessons/zh_cn/webgl-fundamentals.html)
 
 ## Implementations
 * Transformation bar for each selected model
