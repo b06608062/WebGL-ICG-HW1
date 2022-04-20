@@ -64,7 +64,7 @@ class Model {
         mat4.identity(mvMatrix);
         mat4.translate(mvMatrix, this.translation);
         mat4.rotate(mvMatrix, Model.degToRad(this.angle), this.rotation);
-        mvMatrix[4] = shear;
+        mat4.multiply(mvMatrix, [1, 0, 0, 0, shear, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
         mat4.scale(mvMatrix, this.scale);
 
         gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
