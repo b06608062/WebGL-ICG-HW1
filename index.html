@@ -499,7 +499,6 @@
     }
 
     function webGLStart() {
-        console.log(mvMatrix);
         var canvas = document.getElementById("ICG-canvas");
         initGL(canvas);
         shaders = {"flat": initShaders("Flat"), "gouraud": initShaders("Gouraud"), "phong": initShaders("Phong"), "texture": initShaders("Texture")};
