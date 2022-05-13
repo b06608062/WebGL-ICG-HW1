@@ -352,7 +352,7 @@
         "Silver": [0.19, 0.19, 0.19, 0.51, 0.51, 0.51, 0.51, 0.51, 0.51, 51],
         "Jade": [0.14, 0.22, 0.16, 0.54, 0.89, 0.63, 0.32, 0.32, 0.32, 13],
         "Texture": [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 32],
-    }
+    };
 
     function initGL(canvas) {
         try {
@@ -370,7 +370,7 @@
         if (!gl) {
             alert("Could not initialise WebGL, sorry :-(");
         }
-    }
+    };
 
     function getShader(gl, id) {
         var shaderScript = document.getElementById(id);
@@ -409,7 +409,7 @@
         }
 
         return shader;
-    }
+    };
 
     function initShaders(mode) {
         var fragmentShader = getShader(gl, "fragmentShader" + mode);
@@ -450,7 +450,7 @@
         shaderProgram.alphaUniform = gl.getUniformLocation(shaderProgram, "uAlpha");
 
         return shaderProgram;
-    }
+    };
 
     /*
         TODO HERE:
@@ -480,7 +480,7 @@
                 value.model.setUp(gl, shaderProgram, pMatrix, perspective, mvMatrix, shear, nMatrix, useTexture && key == "Teapot");
             }
         }
-    }
+    };
 
     function animate() {
         var timeNow = new Date().getTime();
@@ -490,13 +490,13 @@
         }
         
         lastTime = timeNow;
-    }
+    };
 
     function tick() {
         requestAnimFrame(tick);
         drawScene();
         animate();
-    }
+    };
 
     function webGLStart() {
         var canvas = document.getElementById("ICG-canvas");
@@ -520,14 +520,14 @@
         gl.enable(gl.DEPTH_TEST);
 
         tick();
-    }
+    };
 
     function handleModelSelect(target) {
         models[target.value].display = target.checked;
         document.getElementById(target.value).style.display = target.checked ? "table-row" : "none";
         num_of_active_model += target.checked ? 1 : -1;
         document.getElementById("control-table").style.display = num_of_active_model > 0 ? "block" : "none";
-    }
+    };
 
     function handleShaderSelect(target) {
         use_shader = target.value;
@@ -594,17 +594,17 @@
                 shininess = target.value;
                 break
         }
-    }
+    };
 
     function handlePerspective(target) {
         document.getElementById(target.name).innerHTML = target.value;
         perspective = target.value;
-    }
+    };
 
     function handleShear(target) {
-        document.getElementById(target.name).innerHTML = target.value >= 0 ? `x + ${target.value}y` : `x - ${-target.value}y`
+        document.getElementById(target.name).innerHTML = target.value >= 0 ? `x + ${target.value}y` : `x - ${-target.value}y`;
         shear = target.value;
-    }
+    };
 
     function handleControlBar(target) {
         var model = models[target.name].model;
@@ -635,7 +635,7 @@
 
     function handleLighhtSelect(target, idx) {
         lights[idx] = target.checked ? 1 : 0;
-    }
+    };
 
     function handleChangeMaterial(value) {
         var light_control_bar_list = document.getElementById("light-control-box").childNodes;
@@ -695,6 +695,7 @@
                     break
             }
         }
+        
         switch (value) {
             case "Jade":
                 alpha = 0.95;
@@ -702,8 +703,9 @@
             default:
                 alpha = 1.0;
         }
+        
         useTexture = value == "Texture" ? true : false;
-    }
+    };
 
 </script>
 </head>
